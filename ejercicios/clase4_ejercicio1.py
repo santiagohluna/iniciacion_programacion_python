@@ -48,10 +48,12 @@ df["Subtotal"] = df["Precio con IVA"] * df["Cantidad"]
 
 # Salida
 
+ticket = "Ticket"
+
 print(" ")
-print("======")
+print("=" * len(ticket))
 print("Ticket")
-print("======")
+print("=" * len(ticket))
 print(" ")
 print(df)
 print(" ")
