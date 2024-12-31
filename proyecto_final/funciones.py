@@ -1240,42 +1240,38 @@ def menu_principal():
         5: "Listado completo de productos",
         6: "Salir",
     }
+
+    claves = list(opciones.keys())
+
+    limpiar_pantalla()
+    print()
+    print("=" * len(titulo_menu_ppal))
+    print(titulo_menu_ppal)
+    print("=" * len(titulo_menu_ppal))
+    print()
+    for opt in claves:
+        print(f"{opt}. {opciones[opt]}.")
     
     opcion = 0
 
     opcion_salir = int(list(opciones.keys())[list(opciones.values()).index("Salir")])
     while opcion != opcion_salir:
-        limpiar_pantalla()
-        i = 1
-        print()
-        print("=" * len(titulo_menu_ppal))
-        print(titulo_menu_ppal)
-        print("=" * len(titulo_menu_ppal))
-        print()
-        for opt in opciones:
-            print(f"{i}. {opciones[i]}.")
-            i += 1
 
         # Solicitar al usuario que seleccione una opción
         try:
             opcion = int(input(f"\nPor favor, seleccione una opción (1-{opcion_salir}): "))
         except:
-            print(f"\nDebe ingresar un número entre 1 y {opcion_salir}.")
-
-        # Mostrar la opción seleccionada
-
-        if opcion == 1:
-            agregar_producto()
-        elif opcion == 2:
-            buscar_producto()
-        elif opcion == 3:
-            modificar_producto()
-        elif opcion == 4:
-            eliminar_producto()
-        elif opcion == 5:
-            consultar_inventario()
-        elif opcion == opcion_salir:
-            print("\n\t¡Gracias por utlizar nuestro sistema!\n\n\t¡Hasta pronto!\n")
+            print(f"\nDebe ingresar un número entre 1 y {opcion_salir}, inclusive.")
         else:
-            print(f"Debe ingresar un número entre 1 y {opcion_salir} inclusive.")
-            continue
+            if opcion == 1:
+                agregar_producto()
+            elif opcion == 2:
+                buscar_producto()
+            elif opcion == 3:
+                modificar_producto()
+            elif opcion == 4:
+                eliminar_producto()
+            elif opcion == 5:
+                consultar_inventario()
+            elif opcion == opcion_salir:
+                print("\n\t¡Gracias por utlizar nuestro sistema!\n\n\t¡Hasta pronto!\n")
