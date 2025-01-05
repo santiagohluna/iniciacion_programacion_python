@@ -1,34 +1,20 @@
 import os
-import re
 import sqlite3
 import numpy as np
+import pandas as pd
 
-titulo_menu_ppal = "Menú de gestión de productos."
-titulo_menu_buscar = "Buscar un producto."
-titulo_menu_buscar_nombre = "Buscar producto por su nombre."
-titulo_menu_buscar_desc = "Buscar producto por su descripción."
-titulo_menu_buscar_codigo = "Buscar producto por su código."
-titulo_menu_eliminar_nombre = "Eliminar producto por su nombre."
-titulo_menu_eliminar_desc = "Eliminar producto por su descripción."
-titulo_menu_eliminar_codigo = "Eliminar producto por su código."
-titulo_menu_modificar_nombre = "Modificar producto por su nombre."
-titulo_menu_modificar_desc = "Modificar producto por su descripción."
-titulo_menu_modificar_codigo = "Modificar producto por su código."
-titulo_menu_buscar = "Buscar un producto."
-titulo_eliminar = "Eliminar un producto."
-titulo_modificar = "Modificar la información de un producto."
-titulo_registro = "Alta de productos"
-titulo_codigo = "Código"
-titulo_nombre = "Nombre del producto"
-titulo_descripcion = "Descripción"
-titulo_precio = "Precio" + " " * 10
-titulo_cantidad = "Cantidad en stock"
-titulo_categoria = "Categoría"
-titulo_lista = "Lista de productos."
+# Crear la conexión a la base de datos.
+conexion = sqlite3.connect("PFI_Python.db")
+cursor = conexion.cursor()
 
-inventario = []
+opciones_menu_ppal = {
+        1: "Alta de productos nuevos",
+        2: "Consultar datos de productos",
+        3: "Modificar la información de un producto",
+        4: "Eliminar productos",
+        5: "Salir",
+    }
 
-n_caracteres = [0,0,0,0,0,0]
 
 opciones_modificar = {1: "Modificar el nombre del producto",
             2: "Modificar la descripción del producto",
@@ -37,11 +23,12 @@ opciones_modificar = {1: "Modificar el nombre del producto",
             5: "Modificar la categoría del producto"
             }
 
-campos = {1: "Nombre",
-            2: "Descripción",
-            3: "Cantidad",
-            4: "Precio",
-            5: "Categoría"}
+campos = ["Código",
+         "Nombre",
+         "Descripción",
+         "Cantidad",
+         "Precio",
+         "Categoría"]
 
 # Limpiar pantalla
 def limpiar_pantalla():
@@ -49,27 +36,49 @@ def limpiar_pantalla():
 
 # Función para agregar productos.
 def agregar_producto():
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
 
-    limpiar_pantalla()
+    titulo_registro = "Alta de productos"
+
+    continuar = (
+                input("¿Desea agregar un producto? Ingrese 's' o '[n]': ").lower() == "s"
+            )
     print(" ")
-    print(titulo_registro)
-    print("=" * len(titulo_registro))
-    print(" ")
-    continuar = True
     while continuar:
+
+        limpiar_pantalla()
+        print(" ")
+        print("=" * len(titulo_registro))
+        print(titulo_registro)
+        print("=" * len(titulo_registro))
+        print(" ")
+
         # Ingresar los datos del producto a agregar.
         try:
-            codigo = int(input("Ingrese el código del producto (enter para volver al menú principal): "))
+            codigo = int(input("Ingrese el código del producto: "))
         except:
-            codigo = -1
+            print("\nDebe ingresar un número.\n")
+            continuar = True
         else:
             nombre = input("Ingrese el nombre del producto: ")
             descripcion = input("Ingrese una descripción del producto: ")
-            cantidad = int(input("Ingrese la cantidad en stock: "))
-            precio = float(input("Ingrese el precio del producto: "))
+            cont = True
+            while cont:
+                try:
+                    cantidad = int(input("Ingrese la cantidad en stock: "))
+                except:
+                    print("\nDebe ingresar un número natural.\n")
+                    cont = True
+                else:
+                    cont = False
+            cont = True
+            while cont:
+                try:
+                    precio = float(input("Ingrese el precio del producto: "))
+                except:
+                    print("\nDebe ingresar un número real.\n")
+                else:
+                    cont = False
+            
             categoria = input("Ingrese la categoría del producto: ")
 
             # Agregar el producto a la base de datos.
@@ -81,1106 +90,91 @@ def agregar_producto():
             # Producto registrado con éxito.
             print(f"\nProducto registrado con el código {codigo}.\n")
 
-        # Preguntar al usuario si quiere agregar otro producto.
-        if codigo < 0:
-            break
-        else:
             continuar = (
                 input("¿Desea agregar otro producto? Ingrese 's' o '[n]': ").lower() == "s"
             )
             print(" ")
 
-    # Cerrar la conexión
-    conexion.close()
+def imprimir_resultados(resultados):
 
-# Búsqueda de productos por código.
-def buscar_por_codigo():
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
+    titulo_codigo = "Código"
+    titulo_nombre = "Nombre del producto"
+    titulo_descripcion = "Descripción"
+    titulo_precio = "Precio"
+    titulo_cantidad = "Cantidad en stock"
+    titulo_categoria = "Categoría"
 
-    continuar = True
+    n_caracteres = [0,0,0,0,0,0]
 
-    while continuar:
+    if resultados:
 
-        print()
-        print("=" * len(titulo_menu_buscar_codigo))
-        print(titulo_menu_buscar_codigo)
-        print("=" * len(titulo_menu_buscar_codigo))
-        print()
-        
-        try:
-            codigo = int(input("Ingrese el código del producto a buscar: "))
-        except:
-            print(f"\nDebe ingresar un número.\n")
+        n_codigos = []
+        n_nombres = []
+        n_descripciones = []
+        n_cantidades = []
+        n_precios = []
+        n_categorias = []
+
+        for registro in resultados:
+                n_codigo = len(str(registro[0]))
+                n_nombre = len(registro[1])
+                n_descripcion = len(registro[2])
+                n_cantidad = len(str(registro[3]))
+                n_precio = len(str(registro[4]))
+                n_categoria = len(registro[5])
+
+                n_codigos.append(n_codigo)
+                n_nombres.append(n_nombre)
+                n_descripciones.append(n_descripcion)
+                n_cantidades.append(n_cantidad)
+                n_precios.append(n_precio)
+                n_categorias.append(n_categoria)
+
+        nmax_codigos = np.max(n_codigos)
+        nmax_nombres = np.max(n_nombres)
+        nmax_descripciones = np.max(n_descripciones)
+        nmax_cantidades = np.max(n_cantidades)
+        nmax_precios = np.max(n_precios)
+        nmax_categorias = np.max(n_categorias)
+
+        if (len(titulo_codigo) <= nmax_codigos):
+            n_caracteres[0] = nmax_codigos
         else:
-            cursor.execute("SELECT * FROM inventario where Código = ?",(codigo,))
-            resultado = cursor.fetchone()
-            
-            # Verificar si se encontró el registro.
-            if resultado:
-                print("\nDatos del producto consultado:\n")
-                print(f"\tCódigo: {resultado[0]}.")
-                print(f"\tNombre: {resultado[1]}.")
-                print(f"\tDescripción: {resultado[2]}.")
-                print(f"\tCantidad: {resultado[3]} unidades.")
-                print(f"\tPrecio: $ {resultado[4]}.")
-                print(f"\tCategoría: {resultado[5]}.")
-            else:
-                print(f"\nNo se encontró el producto con el código {codigo}.")
-
-        continuar = (
-            input("\n¿Desea consultar otro producto por código? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-        # Cerrar la conexión
-        conexion.close()
-    
-# Búsqueda de productos por nombre.
-def buscar_por_nombre():
-
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    continuar = True
-
-    while continuar:
+            n_caracteres[0] = len(titulo_codigo)
         
-        limpiar_pantalla()
-
-        print()
-        print("=" * len(titulo_menu_buscar_nombre))
-        print(titulo_menu_buscar_nombre)
-        print("=" * len(titulo_menu_buscar_nombre))
-        print()
-
-        # Obtener todos los registros.
-        cursor.execute("SELECT * FROM inventario")
-        inventario = cursor.fetchall()
-
-        # Pedir al usuario el nombre del producto a buscar.
-        txt = input("Ingrese el nombre o patrón de búsqueda (RegEx): ")
-
-        resultados = {}
-
-        n = 0
-
-        if inventario:
-            for registro in inventario:
-                x = re.search(txt,registro[1], re.IGNORECASE)
-                if x:
-                    resultados[n] = registro
-                    n += 1
+        if (len(titulo_nombre) <= nmax_nombres):
+            n_caracteres[1] = nmax_nombres
         else:
-            print("\nEl inventario está vacío.")
-
-        if n==1:
-            print("\n\tSe encontró un producto con el nombre ingresado.\n")
-        elif n>1:
-            print(f"\n\tSe encontraron {n} productos con el nombre ingresado.\n")
+            n_caracteres[1] = len(titulo_nombre)
         
-        if resultados:
-            for i in resultados:
-                resultado = resultados[i]
-                print(f"\nDatos del producto {i+1} encontrado:\n")
-                print(f"\tCódigo: {resultado[0]}.")
-                print(f"\tNombre: {resultado[1]}.")
-                print(f"\tDescripción: {resultado[2]}.")
-                print(f"\tCantidad: {resultado[3]} unidades.")
-                print(f"\tPrecio: $ {resultado[4]}.")
-                print(f"\tCategoría: {resultado[5]}.")
-                n += 1
+        if (len(titulo_descripcion) <= nmax_descripciones):
+            n_caracteres[2] = nmax_descripciones
         else:
-            print("\nNo se encontró ningún producto con ese nombre.")
+            n_caracteres[2] = len(titulo_descripcion)
 
-        print(" ")
-        continuar = (
-            input("¿Desea consultar otro producto por nombre? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-    # Cerrar la conexión
-    conexion.close()
-
-def buscar_por_descripcion():
-
-     # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    continuar = True
-
-    while continuar:
+        if (len(titulo_cantidad) <= nmax_cantidades):
+            n_caracteres[3] = nmax_cantidades
+        else:
+            n_caracteres[3] = len(titulo_cantidad)
         
-        limpiar_pantalla()
-
-        print()
-        print("=" * len(titulo_menu_buscar_desc))
-        print(titulo_menu_buscar_desc)
-        print("=" * len(titulo_menu_buscar_desc))
-        print()
-
-        # Obtener todos los registros.
-        cursor.execute("SELECT * FROM inventario")
-        inventario = cursor.fetchall()
-
-        # Pedir al usuario el nombre del producto a buscar.
-        txt = input("Ingrese la descripción o patrón de búsqueda (RegEx): ")
-
-        resultados = {}
-
-        n = 0
-
-        if inventario:
-            for registro in inventario:
-                x = re.search(txt,registro[2], re.IGNORECASE)
-                if x:
-                    resultados[n] = registro
-                    n += 1
+        if (len(titulo_precio) <= nmax_precios):
+            n_caracteres[4] = nmax_precios
         else:
-            print("\nEl inventario está vacío.")
-
-        if n==1:
-            print("\n\tSe encontró un producto con la descripción ingresada.\n")
-        elif n>1:
-            print(f"\n\tSe encontraron {n} productos con la descripción ingresada.\n")
+            n_caracteres[4] = len(titulo_precio)
         
-        if resultados:
-            for i in resultados:
-                resultado = resultados[i]
-                print(f"\nDatos del producto {i+1} encontrado:\n")
-                print(f"\tCódigo: {resultado[0]}.")
-                print(f"\tNombre: {resultado[1]}.")
-                print(f"\tDescripción: {resultado[2]}.")
-                print(f"\tCantidad: {resultado[3]} unidades.")
-                print(f"\tPrecio: $ {resultado[4]}.")
-                print(f"\tCategoría: {resultado[5]}.")
-                n += 1
+        if (len(titulo_categoria) <= nmax_categorias):
+            n_caracteres[5] = nmax_categorias
         else:
-            print("\nNo se encontró ningún producto con esa descripción.")
-
-        print(" ")
-        continuar = (
-            input("¿Desea consultar otro producto por descripción? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-    # Cerrar la conexión
-    conexion.close()
-
-def buscar_producto():
-    
-    continuar = True
-
-    opciones = {
-            1: "Buscar por código",
-            2: "Buscar por nombre",
-            3: "Buscar por descripción",
-            4: "Volver al menú anterior"
-        }
-    
-    opcion = 0
-
-    while continuar:
-        limpiar_pantalla()
-        i = 1
-        print()
-        print("=" * len(titulo_menu_buscar))
-        print(titulo_menu_buscar)
-        print("=" * len(titulo_menu_buscar))
-        print()
-        for opt in opciones:
-            print(f"{i}. {opciones[i]}.")
-            i += 1
-
-        # Solicitar al usuario que seleccione una opción
-        while (opcion != 1 or 2 or 3 or 4):
-            try:
-                opcion = int(input(f"\nPor favor, seleccione una opción (1-4): "))
-            except:
-                print(f"\nDebe ingresar un número.")
-            else:
-                if opcion == 1:
-                    buscar_por_codigo()
-                    break
-                elif opcion == 2:
-                    buscar_por_nombre()
-                    break
-                elif opcion == 3:
-                    buscar_por_descripcion()
-                    break
-                elif opcion == 4:
-                    break
-                else:
-                    print(f"\nDebe ingresar un número entre 1 y 4 inclusive.")
-                    continue
+            n_caracteres[5] = len(titulo_categoria)
         
-        if (opcion == 4 ):
-            continuar = False
-        else:
-            continuar = (
-                input("¿Desea consultar otro producto? Ingrese 's' o '[n]': ").lower() == "s"
+        # Mostrar los registros en pantalla.
+        print(f"\n{titulo_codigo}" + " " * (n_caracteres[0]-len(titulo_codigo)) 
+            + f" {titulo_nombre}" + " " * (n_caracteres[1]-len(titulo_nombre)) 
+            + f" {titulo_descripcion}" + " " * (n_caracteres[2]-len(titulo_descripcion)) 
+            + f" {titulo_cantidad}"  + " " * (n_caracteres[3]-len(titulo_cantidad)) 
+            + f" {titulo_precio}" + " " * (n_caracteres[4]-len(titulo_precio)) 
+            + f" {titulo_categoria}" + " " * (n_caracteres[5]-len(titulo_categoria))
             )
-            print(" ")
-
-def modificar_por_codigo():
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    continuar = True
-
-    while continuar:
-
-        print()
-        print("=" * len(titulo_menu_eliminar_codigo))
-        print(titulo_menu_eliminar_codigo)
-        print("=" * len(titulo_menu_eliminar_codigo))
-        print()
-        
-        codigo = -1
-
-        while codigo < 0:
-            try:
-                codigo = int(input("Ingrese el código del producto a modificar: "))
-            except:
-                print(f"\nDebe ingresar un número.\n")
-                codigo = -1
-            else:
-                try:
-                    cursor.execute("SELECT * FROM inventario where Código = ?",(codigo,))
-                    resultado = cursor.fetchone()
-                except:
-                    print(f"\nNo se encontró el producto con el código {codigo}.")
-                    codigo = -1
-                else:
-                # Verificar si se encontró el registro.
-                    if resultado:
-                        print("\nDatos del producto a modificar:\n")
-                        print(f"\tCódigo: {resultado[0]}.")
-                        print(f"\tNombre: {resultado[1]}.")
-                        print(f"\tDescripción: {resultado[2]}.")
-                        print(f"\tCantidad: {resultado[3]} unidades.")
-                        print(f"\tPrecio: $ {resultado[4]}.")
-                        print(f"\tCategoría: {resultado[5]}.")
-
-                        confirmar = (
-                            input("\n¿Confirma modificar este producto? Ingrese 's' o '[n]': ").lower() == "s"
-                        )
-                        if confirmar:
-                            i = 1
-                            print(" ")
-                            for opt in opciones_modificar:
-                                print(f"{i}. {opciones_modificar[i]}.")
-                                i += 1
-                            
-                            try:
-                                opcion = int(input("\nPor favor, seleccione una opción (1-5): "))
-                            except:
-                                print("\nDebe ingresar un número entre 1 y 6.")
-
-                            if opcion==1:
-                                nuevo_nombre = input("Ingrese el nuevo nombre del producto: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nuevo_nombre,codigo))
-                            elif opcion==2:
-                                nueva_desc = input("Ingrese la nueva descricpción: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_desc,codigo))
-                            elif opcion==3:
-                                nueva_cantidad = int(input("Ingrese el nuevo valor de la cantidad en stock: "))
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_cantidad,codigo))
-                            elif opcion==4:
-                                nuevo_precio = float(input("Ingrese el nuevo precio del producto: "))
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nuevo_precio,codigo))
-                            elif opcion==5:
-                                nueva_categoria = input("Ingrese el nuevo nombre de la categoría del producto: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_categoria,codigo))
-                            
-                            # Confirmar cambios.
-                            conexion.commit()
-
-                            # Producto eliminado con éxito.
-                            print(f"\nProducto modificado con éxito (código {codigo}).\n")
-
-        continuar = (
-            input("\n¿Desea modificar otro producto por código? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-    # Cerrar la conexión
-    conexion.close()
-
-# Modificar productos por nombre.
-def modificar_por_nombre():
-
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    continuar = True
-
-    while continuar:
-        
-        limpiar_pantalla()
-
-        print()
-        print("=" * len(titulo_menu_modificar_nombre))
-        print(titulo_menu_modificar_nombre)
-        print("=" * len(titulo_menu_modificar_nombre))
-        print()
-
-        # Obtener todos los registros.
-        cursor.execute("SELECT * FROM inventario")
-        inventario = cursor.fetchall()
-
-        # Pedir al usuario el nombre del producto a buscar.
-        txt = input("Ingrese el nombre o patrón de búsqueda (RegEx): ")
-
-        resultados = {}
-
-        n = 0
-
-        if inventario:
-            for registro in inventario:
-                x = re.search(txt,registro[1], re.IGNORECASE)
-                if x:
-                    resultados[n] = registro
-                    n += 1
-        else:
-            print("\nEl inventario está vacío.")
-
-        if resultados:
-            if n==1:
-                print("\n\tSe encontró un producto con el nombre ingresado.\n")
-                resultado = resultados[0]
-                print(f"\nDatos del producto encontrado:\n")
-                print(f"\tCódigo: {resultado[0]}.")
-                print(f"\tNombre: {resultado[1]}.")
-                print(f"\tDescripción: {resultado[2]}.")
-                print(f"\tCantidad: {resultado[3]} unidades.")
-                print(f"\tPrecio: ${resultado[4]}.")
-                print(f"\tCategoría: {resultado[5]}.")
-            elif n>1:
-                print(f"\n\tSe encontraron {n} productos con el nombre ingresado.\n")
-                for i in resultados:
-                    resultado = resultados[i]
-                    print(f"\nDatos del producto {i+1} encontrado:\n")
-                    print(f"\tCódigo: {resultado[0]}.")
-                    print(f"\tNombre: {resultado[1]}.")
-                    print(f"\tDescripción: {resultado[2]}.")
-                    print(f"\tCantidad: {resultado[3]} unidades.")
-                    print(f"\tPrecio: ${resultado[4]}.")
-                    print(f"\tCategoría: {resultado[5]}.")
-                    n += 1
-            
-            codigo = -1
-
-            while codigo < 0:
-                try:
-                    if n>1:
-                        codigo = int(input("\nIngrese el código del producto a modificar: "))
-                    else:
-                        codigo = resultado[0]
-                except:
-                    print(f"\nDebe ingresar un número.\n")
-                    codigo = -1
-                else:
-                    try:
-                        cursor.execute("SELECT * FROM inventario where Código = ?",(codigo,))
-                        resultado = cursor.fetchone()
-                    except:
-                        print(f"\nNo se encontró el producto con el código {codigo}.")
-                        codigo = -1
-                    else:
-                    
-                        if n>1:
-                            # Verificar si se encontró el registro.
-                            if resultado:
-                                print("\nDatos del producto a modificar:\n")
-                                print(f"\tCódigo: {resultado[0]}.")
-                                print(f"\tNombre: {resultado[1]}.")
-                                print(f"\tDescripción: {resultado[2]}.")
-                                print(f"\tCantidad: {resultado[3]} unidades.")
-                                print(f"\tPrecio: $ {resultado[4]}.")
-                                print(f"\tCategoría: {resultado[5]}.")
-
-                        confirmar = (
-                            input("\n¿Confirma modificar este producto? Ingrese 's' o '[n]': ").lower() == "s"
-                        )
-                        if confirmar:
-                                
-                            i = 1
-                            print(" ")
-                            for opt in opciones_modificar:
-                                print(f"{i}. {opciones_modificar[i]}.")
-                                i += 1
-                            
-                            try:
-                                opcion = int(input("\nPor favor, seleccione una opción (1-5): "))
-                            except:
-                                print("\nDebe ingresar un número entre 1 y 6.")
-
-                            if opcion==1:
-                                nuevo_nombre = input("Ingrese el nuevo nombre del producto: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nuevo_nombre,codigo))
-                            elif opcion==2:
-                                nueva_desc = input("Ingrese la nueva descricpción: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_desc,codigo))
-                            elif opcion==3:
-                                nueva_cantidad = int(input("Ingrese el nuevo valor de la cantidad en stock: "))
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_cantidad,codigo))
-                            elif opcion==4:
-                                nuevo_precio = float(input("Ingrese el nuevo precio del producto: "))
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nuevo_precio,codigo))
-                            elif opcion==5:
-                                nueva_categoria = input("Ingrese el nuevo nombre de la categoría del producto: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_categoria,codigo))
-                            
-                            # Confirmar cambios.
-                            conexion.commit()
-
-                            # Producto modificado con éxito.
-                            print(f"\nProducto modificado con éxito (código {codigo}).\n")
-
-        print(" ")
-        continuar = (
-            input("¿Desea modificar otro producto por nombre? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-    # Cerrar la conexión
-    conexion.close()
-
-# MOdificar producto por su descripción.
-def modificar_por_descripcion():
-    
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    continuar = True
-
-    while continuar:
-        
-        limpiar_pantalla()
-
-        print()
-        print("=" * len(titulo_menu_modificar_desc))
-        print(titulo_menu_modificar_desc)
-        print("=" * len(titulo_menu_modificar_desc))
-        print()
-
-        # Obtener todos los registros.
-        cursor.execute("SELECT * FROM inventario")
-        inventario = cursor.fetchall()
-
-        # Pedir al usuario la descripción del producto a eliminar.
-        txt = input("Ingrese la descripción o patrón de búsqueda (RegEx): ")
-
-        resultados = {}
-
-        n = 0
-
-        if inventario:
-            for registro in inventario:
-                x = re.search(txt,registro[2], re.IGNORECASE)
-                if x:
-                    resultados[n] = registro
-                    n += 1
-        else:
-            print("\nEl inventario está vacío.")
-
-        if resultados:
-            if n==1:
-                print("\n\tSe encontró un producto con el nombre ingresado.\n")
-                resultado = resultados[0]
-                print(f"\nDatos del producto encontrado:\n")
-                print(f"\tCódigo: {resultado[0]}.")
-                print(f"\tNombre: {resultado[1]}.")
-                print(f"\tDescripción: {resultado[2]}.")
-                print(f"\tCantidad: {resultado[3]} unidades.")
-                print(f"\tPrecio: ${resultado[4]}.")
-                print(f"\tCategoría: {resultado[5]}.")
-            elif n>1:
-                print(f"\n\tSe encontraron {n} productos con el nombre ingresado.\n")
-                for i in resultados:
-                    resultado = resultados[i]
-                    print(f"\nDatos del producto {i+1} encontrado:\n")
-                    print(f"\tCódigo: {resultado[0]}.")
-                    print(f"\tNombre: {resultado[1]}.")
-                    print(f"\tDescripción: {resultado[2]}.")
-                    print(f"\tCantidad: {resultado[3]} unidades.")
-                    print(f"\tPrecio: ${resultado[4]}.")
-                    print(f"\tCategoría: {resultado[5]}.")
-                    n += 1
-            
-            codigo = -1
-
-            while codigo < 0:
-                try:
-                    if n>1:
-                        codigo = int(input("\nIngrese el código del producto a modificar: "))
-                    else:
-                        codigo = resultado[0]
-                except:
-                    print(f"\nDebe ingresar un número.\n")
-                    codigo = -1
-                else:
-                    try:
-                        cursor.execute("SELECT * FROM inventario where Código = ?",(codigo,))
-                        resultado = cursor.fetchone()
-                    except:
-                        print(f"\nNo se encontró el producto con el código {codigo}.")
-                        codigo = -1
-                    else:
-                    
-                        if n>1:
-                            # Verificar si se encontró el registro.
-                            if resultado:
-                                print("\nDatos del producto a modificar:\n")
-                                print(f"\tCódigo: {resultado[0]}.")
-                                print(f"\tNombre: {resultado[1]}.")
-                                print(f"\tDescripción: {resultado[2]}.")
-                                print(f"\tCantidad: {resultado[3]} unidades.")
-                                print(f"\tPrecio: $ {resultado[4]}.")
-                                print(f"\tCategoría: {resultado[5]}.")
-
-                        confirmar = (
-                            input("\n¿Confirma modificar este producto? Ingrese 's' o '[n]': ").lower() == "s"
-                        )
-                        if confirmar:
-                            
-                            i = 1
-                            print(" ")
-                            for opt in opciones_modificar:
-                                print(f"{i}. {opciones_modificar[i]}.")
-                                i += 1
-                            
-                            try:
-                                opcion = int(input("\nPor favor, seleccione una opción (1-5): "))
-                            except:
-                                print("\nDebe ingresar un número entre 1 y 6.")
-
-                            if opcion==1:
-                                nuevo_nombre = input("Ingrese el nuevo nombre del producto: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nuevo_nombre,codigo))
-                            elif opcion==2:
-                                nueva_desc = input("Ingrese la nueva descricpción: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_desc,codigo))
-                            elif opcion==3:
-                                nueva_cantidad = int(input("Ingrese el nuevo valor de la cantidad en stock: "))
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_cantidad,codigo))
-                            elif opcion==4:
-                                nuevo_precio = float(input("Ingrese el nuevo precio del producto: "))
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nuevo_precio,codigo))
-                            elif opcion==5:
-                                nueva_categoria = input("Ingrese el nuevo nombre de la categoría del producto: ")
-                                cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nueva_categoria,codigo))
-                            
-                            # Confirmar cambios.
-                            conexion.commit()
-
-                            # Producto registrado con éxito.
-                            print(f"\nProducto modificado con éxito (código {codigo}).\n")
-
-        print(" ")
-        continuar = (
-            input("¿Desea modificar otro producto por descripción? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-    # Cerrar la conexión
-    conexion.close()
-
-def modificar_producto():
-
-    continuar = True
-
-    opciones = {
-            1: "Seleccionar producto a modificar por código",
-            2: "Seleccionar producto a modificar por nombre",
-            3: "Seleccionar producto a modificar por descripción",
-            4: "Volver al menú principal"
-        }
-    
-    opcion = 0
-
-    while continuar:
-
-        limpiar_pantalla()
-
-        print()
-        print("=" * len(titulo_modificar))
-        print(titulo_modificar)
-        print("=" * len(titulo_modificar))
-        print()
-
-        i = 1
-        for opt in opciones:
-            print(f"{i}. {opciones[i]}.")
-            i += 1
-
-        # Solicitar al usuario que seleccione una opción
-        while (opcion != 1 or 2 or 3 or 4):
-            try:
-                opcion = int(input(f"\nPor favor, seleccione una opción (1-4): "))
-            except:
-                print(f"Debe ingresar un número entre 1 y 3 inclusive.")
-            else:
-                if opcion == 1:
-                    modificar_por_codigo()
-                    break
-                elif opcion == 2:
-                    modificar_por_nombre()
-                    break
-                elif opcion == 3:
-                    modificar_por_descripcion()
-                    break
-                elif opcion == 4:
-                    break
-                else:
-                    print(f"\nDebe ingresar un número entre 1 y 3 inclusive.")
-                    continue
-
-        if opcion == 4:
-            continuar = False
-        else:
-            # Preguntar al usuario si el usuario quiere eliminar otro producto.
-            continuar = (
-                input("\n¿Desea modificar otro producto? Ingrese 's' o '[n]': ").lower() == "s"
-            )
-            print(" ")
-
-# Búsqueda de productos por código.
-def eliminar_por_codigo():
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    continuar = True
-
-    while continuar:
-
-        print()
-        print("=" * len(titulo_menu_eliminar_codigo))
-        print(titulo_menu_eliminar_codigo)
-        print("=" * len(titulo_menu_eliminar_codigo))
-        print()
-        
-        codigo = -1
-
-        while codigo < 0:
-            try:
-                codigo = int(input("Ingrese el código del producto a eliminar: "))
-            except:
-                print(f"\nDebe ingresar un número.\n")
-                codigo = -1
-            else:
-                try:
-                    cursor.execute("SELECT * FROM inventario where Código = ?",(codigo,))
-                    resultado = cursor.fetchone()
-                except:
-                    print(f"\nNo se encontró el producto con el código {codigo}.")
-                    codigo = -1
-                else:
-                
-                    # Verificar si se encontró el registro.
-                    if resultado:
-                        print("\nDatos del producto a eliminar:\n")
-                        print(f"\tCódigo: {resultado[0]}.")
-                        print(f"\tNombre: {resultado[1]}.")
-                        print(f"\tDescripción: {resultado[2]}.")
-                        print(f"\tCantidad: {resultado[3]} unidades.")
-                        print(f"\tPrecio: $ {resultado[4]}.")
-                        print(f"\tCategoría: {resultado[5]}.")
-
-                        confirmar = (
-                            input("\n¿Confirma eliminar este producto? Ingrese 's' o '[n]': ").lower() == "s"
-                        )
-                        if confirmar:
-                            cursor.execute("DELETE FROM inventario where Código = ?",(codigo,))
-                            # Confirmar cambios.
-                            conexion.commit()
-
-                            # Producto eliminado con éxito.
-                            print(f"\nProducto eliminado con éxito (código {codigo}).\n")
-
-        continuar = (
-            input("\n¿Desea eliminar otro producto por código? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-    # Cerrar la conexión
-    conexion.close()
-
-# Eliminar productos por nombre.
-def eliminar_por_nombre():
-
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    continuar = True
-
-    while continuar:
-        
-        limpiar_pantalla()
-
-        print()
-        print("=" * len(titulo_menu_eliminar_nombre))
-        print(titulo_menu_eliminar_nombre)
-        print("=" * len(titulo_menu_eliminar_nombre))
-        print()
-
-        # Obtener todos los registros.
-        cursor.execute("SELECT * FROM inventario")
-        inventario = cursor.fetchall()
-
-        # Pedir al usuario el nombre del producto a buscar.
-        txt = input("Ingrese el nombre o patrón de búsqueda (RegEx): ")
-
-        resultados = {}
-
-        n = 0
-
-        if inventario:
-            for registro in inventario:
-                x = re.search(txt,registro[1], re.IGNORECASE)
-                if x:
-                    resultados[n] = registro
-                    n += 1
-        else:
-            print("\nEl inventario está vacío.")
-        
-        if resultados:
-            if n==1:
-                print("\n\tSe encontró un producto con el nombre ingresado.\n")
-                resultado = resultados[0]
-                print(f"\nDatos del producto encontrado:\n")
-                print(f"\tCódigo: {resultado[0]}.")
-                print(f"\tNombre: {resultado[1]}.")
-                print(f"\tDescripción: {resultado[2]}.")
-                print(f"\tCantidad: {resultado[3]} unidades.")
-                print(f"\tPrecio: ${resultado[4]}.")
-                print(f"\tCategoría: {resultado[5]}.")
-            elif n>1:
-                print(f"\n\tSe encontraron {n} productos con el nombre ingresado.\n")
-                for i in resultados:
-                    resultado = resultados[i]
-                    print(f"\nDatos del producto {i+1} encontrado:\n")
-                    print(f"\tCódigo: {resultado[0]}.")
-                    print(f"\tNombre: {resultado[1]}.")
-                    print(f"\tDescripción: {resultado[2]}.")
-                    print(f"\tCantidad: {resultado[3]} unidades.")
-                    print(f"\tPrecio: ${resultado[4]}.")
-                    print(f"\tCategoría: {resultado[5]}.")
-                    n += 1
-            
-            codigo = -1
-
-            while codigo < 0:
-                try:
-                    if n>1:
-                        codigo = int(input("\nIngrese el código del producto a modificar: "))
-                    else:
-                        codigo = resultado[0]
-                except:
-                    print(f"\nDebe ingresar un número.\n")
-                    codigo = -1
-                else:
-                    try:
-                        cursor.execute("SELECT * FROM inventario where Código = ?",(codigo,))
-                        resultado = cursor.fetchone()
-                    except:
-                        print(f"\nNo se encontró el producto con el código {codigo}.")
-                        codigo = -1
-                    else:
-                    
-                        if n>1:
-                        # Verificar si se encontró el registro.
-                            if resultado:
-                                print("\nDatos del producto a eliminar:\n")
-                                print(f"\tCódigo: {resultado[0]}.")
-                                print(f"\tNombre: {resultado[1]}.")
-                                print(f"\tDescripción: {resultado[2]}.")
-                                print(f"\tCantidad: {resultado[3]} unidades.")
-                                print(f"\tPrecio: $ {resultado[4]}.")
-                                print(f"\tCategoría: {resultado[5]}.")
-
-                        confirmar = (
-                            input("\n¿Confirma eliminar este producto? Ingrese 's' o '[n]': ").lower() == "s"
-                        )
-                        if confirmar:
-                            cursor.execute("DELETE FROM inventario where Código = ?",(codigo,))
-                            # Confirmar cambios.
-                            conexion.commit()
-
-                            # Producto registrado con éxito.
-                            print(f"\nProducto eliminado con éxito (código {codigo}).\n")
-
-        print(" ")
-        continuar = (
-            input("¿Desea eliminar otro producto por nombre? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-    # Cerrar la conexión
-    conexion.close()
-
-# Eliminar producto por su descripción.
-def eliminar_por_descripcion():
-    
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    continuar = True
-
-    while continuar:
-        
-        limpiar_pantalla()
-
-        print()
-        print("=" * len(titulo_menu_eliminar_nombre))
-        print(titulo_menu_eliminar_nombre)
-        print("=" * len(titulo_menu_eliminar_nombre))
-        print()
-
-        # Obtener todos los registros.
-        cursor.execute("SELECT * FROM inventario")
-        inventario = cursor.fetchall()
-
-        # Pedir al usuario la descripción del producto a eliminar.
-        txt = input("Ingrese la descripción o patrón de búsqueda (RegEx): ")
-
-        resultados = {}
-
-        n = 0
-
-        if inventario:
-            for registro in inventario:
-                x = re.search(txt,registro[2], re.IGNORECASE)
-                if x:
-                    resultados[n] = registro
-                    n += 1
-        else:
-            print("\nEl inventario está vacío.")
-
-        if resultados:
-            if n==1:
-                print("\n\tSe encontró un producto con el nombre ingresado.\n")
-                resultado = resultados[0]
-                print(f"\nDatos del producto encontrado:\n")
-                print(f"\tCódigo: {resultado[0]}.")
-                print(f"\tNombre: {resultado[1]}.")
-                print(f"\tDescripción: {resultado[2]}.")
-                print(f"\tCantidad: {resultado[3]} unidades.")
-                print(f"\tPrecio: ${resultado[4]}.")
-                print(f"\tCategoría: {resultado[5]}.")
-            elif n>1:
-                print(f"\n\tSe encontraron {n} productos con el nombre ingresado.\n")
-                for i in resultados:
-                    resultado = resultados[i]
-                    print(f"\nDatos del producto {i+1} encontrado:\n")
-                    print(f"\tCódigo: {resultado[0]}.")
-                    print(f"\tNombre: {resultado[1]}.")
-                    print(f"\tDescripción: {resultado[2]}.")
-                    print(f"\tCantidad: {resultado[3]} unidades.")
-                    print(f"\tPrecio: ${resultado[4]}.")
-                    print(f"\tCategoría: {resultado[5]}.")
-                    n += 1
-            
-            codigo = -1
-
-            while codigo < 0:
-                try:
-                    if n>1:
-                        codigo = int(input("\nIngrese el código del producto a modificar: "))
-                    else:
-                        codigo = resultado[0]
-                except:
-                    print(f"\nDebe ingresar un número.\n")
-                    codigo = -1
-                else:
-                    try:
-                        cursor.execute("SELECT * FROM inventario where Código = ?",(codigo,))
-                        resultado = cursor.fetchone()
-                    except:
-                        print(f"\nNo se encontró el producto con el código {codigo}.")
-                        codigo = -1
-                    else:
-                    
-                        if n>1:
-                            # Verificar si se encontró el registro.
-                            if resultado:
-                                print("\nDatos del producto a eliminar:\n")
-                                print(f"\tCódigo: {resultado[0]}.")
-                                print(f"\tNombre: {resultado[1]}.")
-                                print(f"\tDescripción: {resultado[2]}.")
-                                print(f"\tCantidad: {resultado[3]} unidades.")
-                                print(f"\tPrecio: $ {resultado[4]}.")
-                                print(f"\tCategoría: {resultado[5]}.")
-
-                            confirmar = (
-                                input("\n¿Confirma eliminar este producto? Ingrese 's' o '[n]': ").lower() == "s"
-                            )
-                            if confirmar:
-                                cursor.execute("DELETE FROM inventario where Código = ?",(codigo,))
-                                # Confirmar cambios.
-                                conexion.commit()
-
-                                # Producto registrado con éxito.
-                                print(f"\nProducto eliminado con éxito (código {codigo}).\n")
-
-        print(" ")
-        continuar = (
-            input("¿Desea eliminar otro producto por descripción? Ingrese 's' o '[n]': ").lower() == "s"
-        )
-
-    # Cerrar la conexión
-    conexion.close()
-    
-
-def eliminar_producto():
-
-    limpiar_pantalla()
-
-    continuar = True
-
-    opciones = {
-            1: "Seleccionar producto a eliminar por código",
-            2: "Seleccionar producto a eliminar por nombre",
-            3: "Seleccionar producto a eliminar por descripción",
-            4: "Volver al menú principal"
-        }
-    
-    opcion = 0
-
-    while continuar:
-
-        print()
-        print("=" * len(titulo_eliminar))
-        print(titulo_eliminar)
-        print("=" * len(titulo_eliminar))
-        print()
-
-        i = 1
-        for opt in opciones:
-            print(f"{i}. {opciones[i]}.")
-            i += 1
-
-        # Solicitar al usuario que seleccione una opción
-        while (opcion != 1 or 2 or 3 or 4):
-            try:
-                opcion = int(input(f"\nPor favor, seleccione una opción (1-4): "))
-            except:
-                print(f"Debe ingresar un número entre 1 y 3 inclusive.")
-            else:
-                if opcion == 1:
-                    eliminar_por_codigo()
-                    break
-                elif opcion == 2:
-                    eliminar_por_nombre()
-                    break
-                elif opcion == 3:
-                    eliminar_por_descripcion()
-                    break
-                elif opcion == 4:
-                    break
-                else:
-                    print(f"\nDebe ingresar un número entre 1 y 3 inclusive.")
-                    continue
-
-        if opcion == 4:
-            continuar = False
-        else:
-            # Preguntar al usuario si el usuario quiere eliminar otro producto.
-            continuar = (
-                input("\n¿Desea eliminar otro producto? Ingrese 's' o '[n]': ").lower() == "s"
-            )
-            print(" ")
-        
-
-
-def consultar_inventario():
-    limpiar_pantalla()
-
-    # Crear la conexión a la base de datos.
-    conexion = sqlite3.connect("PFI_Python.db")
-    cursor = conexion.cursor()
-
-    # Obtener todos los registros.
-    cursor.execute("SELECT * FROM inventario")
-    inventario = cursor.fetchall()
-
-    n_codigos = []
-    n_nombres = []
-    n_descripciones = []
-    n_cantidades = []
-    n_precios = []
-    n_categorias = []
-
-    for registro in inventario:
-            n_codigo = len(str(registro[0]))
-            n_nombre = len(registro[1])
-            n_descripcion = len(registro[2])
-            n_cantidad = len(str(registro[3]))
-            n_precio = len(str(registro[4]))
-            n_categoria = len(registro[5])
-
-            n_codigos.append(n_codigo)
-            n_nombres.append(n_nombre)
-            n_descripciones.append(n_descripcion)
-            n_cantidades.append(n_cantidad)
-            n_precios.append(n_precio)
-            n_categorias.append(n_categoria)
-
-    nmax_codigos = np.max(n_codigos)
-    nmax_nombres = np.max(n_nombres)
-    nmax_descripciones = np.max(n_descripciones)
-    nmax_cantidades = np.max(n_cantidades)
-    nmax_precios = np.max(n_precios)
-    nmax_categorias = np.max(n_categorias)
-
-    if (len(titulo_codigo) <= nmax_codigos):
-        n_caracteres[0] = nmax_codigos
-    else:
-        n_caracteres[0] = len(titulo_codigo)
-    
-    if (len(titulo_nombre) <= nmax_nombres):
-        n_caracteres[1] = nmax_nombres
-    else:
-        n_caracteres[1] = len(titulo_nombre)
-    
-    if (len(titulo_descripcion) <= nmax_descripciones):
-        n_caracteres[2] = nmax_descripciones
-    else:
-        n_caracteres[2] = len(titulo_descripcion)
-
-    if (len(titulo_cantidad) <= nmax_cantidades):
-        n_caracteres[3] = nmax_cantidades
-    else:
-        n_caracteres[3] = len(titulo_cantidad)
-    
-    if (len(titulo_precio) <= nmax_precios):
-        n_caracteres[4] = nmax_precios
-    else:
-        n_caracteres[4] = len(titulo_precio)
-    
-    if (len(titulo_categoria) <= nmax_categorias):
-        n_caracteres[5] = nmax_categorias
-    else:
-        n_caracteres[5] = len(titulo_categoria)
-    
-    # Mostrar los registros en pantalla.
-    continuar = True
-    while continuar:
-        print(" ")
-        print("=" * len(titulo_lista))
-        print(titulo_lista)
-        print("=" * len(titulo_lista))
-        print(" ")
-        
-        print(f"{titulo_codigo}" + " " * (n_caracteres[0]-len(titulo_codigo)) 
-              + f" {titulo_nombre}" + " " * (n_caracteres[1]-len(titulo_nombre)) 
-              + f" {titulo_descripcion}" + " " * (n_caracteres[2]-len(titulo_descripcion)) 
-              + f" {titulo_cantidad}"  + " " * (n_caracteres[3]-len(titulo_cantidad)) 
-              + f" {titulo_precio}" + " " * (n_caracteres[4]-len(titulo_precio)) 
-              + f" {titulo_categoria}" + " " * (n_caracteres[5]-len(titulo_categoria))
-              )
         print(
             "=" * n_caracteres[0]
             + " "
@@ -1194,7 +188,7 @@ def consultar_inventario():
             + " "
             + "=" * n_caracteres[5]
             )
-        for registro in inventario:
+        for registro in resultados:
             codigo = registro[0]
             nombre = registro[1]
             descripcion = registro[2]
@@ -1221,27 +215,348 @@ def consultar_inventario():
                 + " " * (n_caracteres[5]-len(categoria)) 
                 + " "
             )
+    else:
+        print(f"\nNo se encontró ningún producto.\n")
 
-        continuar = (
-            input("\n\tPulse una tecla para volver al menú principal.\n").lower() == " "
-        )
+def buscar_por_codigo(codigo):
+    cursor.execute(f"SELECT * FROM inventario where {campos[0]} = ?",(codigo,))
+    return cursor.fetchall()
 
-# Programa principal.
+# Búsqueda de productos por nombre.
+def buscar_producto(opcion_consultar):
 
-def menu_principal():
+    if opcion_consultar == 1:
+        seguir = True
+        while seguir:
+            try:
+                codigo = int(input("\nIngrese el código del producto a buscar: "))
+            except:
+                print(f"\nDebe ingresar un número.\n")
+            else:
+                resultado = buscar_por_codigo(codigo)
+                seguir = False
+    else:
+        if opcion_consultar == 4:
+            # Obtener todos los registros.
+            cursor.execute("SELECT * FROM inventario")
+        else:
+            if opcion_consultar == 2:
+                # Pedir al usuario el nombre del producto a buscar.
+                buscar = input("\nIngrese el nombre o patrón de búsqueda (RegEx): ")
+            elif opcion_consultar == 3:
+                # Pedir al usuario el nombre del producto a buscar.
+                buscar = input("\nIngrese la descripción o patrón de búsqueda (RegEx): ")
+            # Obtener todos los registros.
+            cursor.execute(f"SELECT * FROM inventario WHERE {campos[opcion_consultar-1]} LIKE '%{buscar}%'")
+        
+        resultado = cursor.fetchall()
+    
+    return resultado
 
-    # Menú de opciones
+def consultar_producto():
+
+    titulo_menu_buscar = "Buscar un producto."
+    titulo_menu_buscar_nombre = "Buscar producto por su nombre."
+    titulo_menu_buscar_desc = "Buscar producto por su descripción."
+    titulo_menu_buscar_codigo = "Buscar producto por su código."
+    titulo_lista = "Lista de productos."
+    
+    continuar = True
 
     opciones = {
-        1: "Alta de productos nuevos",
-        2: "Consulta de datos de productos",
-        3: "Modificar la información de un producto",
-        4: "Dar de baja productos",
-        5: "Listado completo de productos",
-        6: "Salir",
-    }
+            1: "Buscar por código",
+            2: "Buscar por nombre",
+            3: "Buscar por descripción",
+            4: "Mostrar todos los productos",
+            5: "Volver al menú anterior"
+        }
+    
+    opcion = 0
 
-    claves = list(opciones.keys())
+    while continuar:
+        limpiar_pantalla()
+        i = 1
+        print()
+        print("=" * len(titulo_menu_buscar))
+        print(titulo_menu_buscar)
+        print("=" * len(titulo_menu_buscar))
+        print()
+        for i in opciones.keys():
+            print(f"{i}. {opciones[i]}.")
+
+        # Solicitar al usuario que seleccione una opción
+        try:
+            opcion = int(input(f"\nPor favor, seleccione una opción (1-4): "))
+        except:
+            print(f"\nDebe ingresar un número entre 1 y 4 inclusive.")
+        else:
+            if (opcion == 5 ):
+                continuar = False
+            else:
+                print()
+                if opcion==1:
+                    print("=" * len(titulo_menu_buscar_codigo))
+                    print(titulo_menu_buscar_codigo)
+                    print("=" * len(titulo_menu_buscar_codigo))
+                elif opcion==2:
+                    print("=" * len(titulo_menu_buscar_nombre))
+                    print(titulo_menu_buscar_nombre)
+                    print("=" * len(titulo_menu_buscar_nombre))
+                elif opcion==3:
+                    print("=" * len(titulo_menu_buscar_desc))
+                    print(titulo_menu_buscar_desc)
+                    print("=" * len(titulo_menu_buscar_desc))
+                elif opcion == 4:
+                    print("=" * len(titulo_lista))
+                    print(titulo_lista)
+                    print("=" * len(titulo_lista))
+
+                resultado = buscar_producto(opcion)
+
+                n = len(resultado)
+                
+                if opcion != 4: 
+                    if n==1:
+                        print(f"\n\tSe encontró un producto.")
+                        print(f"\nDatos del producto encontrado:")
+                    elif n>1:
+                        print(f"\n\tSe encontraron {n} productos.")
+                        print("\nDatos de los productos encontrados:")
+
+                imprimir_resultados(resultado)
+
+                continuar = (
+                    input("\n¿Desea consultar otro producto? Ingrese 's' o '[n]': ").lower() == "s"
+                )
+                print()
+
+def modificar_producto():
+
+    titulo_modificar = "Modificar la información productos."
+    titulo_menu_modificar_nombre = "Modificar producto por su nombre."
+    titulo_menu_modificar_desc = "Modificar producto por su descripción."
+    titulo_menu_modificar_codigo = "Modificar producto por su código."
+
+    continuar = True
+
+    opciones = {
+            1: "Seleccionar producto a modificar por código",
+            2: "Seleccionar producto a modificar por nombre",
+            3: "Seleccionar producto a modificar por descripción",
+            4: "Volver al menú principal"
+        }
+    
+    opcion = 0
+
+    while continuar:
+
+        limpiar_pantalla()
+
+        print()
+        print("=" * len(titulo_modificar))
+        print(titulo_modificar)
+        print("=" * len(titulo_modificar))
+        print()
+
+        for i in opciones.keys():
+            print(f"{i}. {opciones[i]}.")
+
+        # Solicitar al usuario que seleccione una opción
+        try:
+            opcion = int(input(f"\nPor favor, seleccione una opción (1-4): "))
+        except:
+            print(f"\nDebe ingresar un número entre 1 y 4 inclusive.")
+        else:
+            if (opcion == 4):
+                continuar = False
+            else:
+                seguir = True
+                while seguir:
+                    print()
+                    if opcion == 1:
+                        print("=" * len(titulo_menu_modificar_codigo))
+                        print(titulo_menu_modificar_codigo)
+                        print("=" * len(titulo_menu_modificar_codigo))
+                        try:
+                            codigo = int(input("\nIngrese el código del producto a modificar: "))
+                        except:
+                            print(f"\nDebe ingresar un número.\n")
+                        else:
+                            producto_a_modificar = buscar_por_codigo(codigo)
+                            imprimir_resultados(producto_a_modificar)
+                    else:
+                        if opcion == 2:
+                            print("=" * len(titulo_menu_modificar_nombre))
+                            print(titulo_menu_modificar_nombre)
+                            print("=" * len(titulo_menu_modificar_nombre))
+                        elif opcion == 3:
+                            print("=" * len(titulo_menu_modificar_desc))
+                            print(titulo_menu_modificar_desc)
+                            print("=" * len(titulo_menu_modificar_desc))
+
+                        resultado = buscar_producto(opcion)
+                        imprimir_resultados(resultado)
+                        n = len(resultado)
+                        if n>1:
+                            try:
+                                codigo = int(input("\nIngrese el código del producto a modificar: "))
+                            except:
+                                print(f"\nDebe ingresar un número.\n")
+                            else:
+                                producto_a_modificar = buscar_por_codigo(codigo)
+                                imprimir_resultados(producto_a_modificar)
+                        else:
+                            codigo = resultado[0][0]
+                        
+                    confirmar = (
+                                input("\n¿Confirma modificar este producto? Ingrese 's' o '[n]': ").lower() == "s"
+                            )
+                    
+                    if confirmar:
+
+                        cont = True
+                        while cont:
+                            print(" ")
+                            for i in opciones_modificar.keys():
+                                print(f"{i}. {opciones_modificar[i]}.")
+                            
+                            try:
+                                opcion = int(input("\nPor favor, seleccione una opción (1-5): "))
+                            except:
+                                print("\nDebe ingresar un número entre 1 y 5.")
+
+                            if opcion==1:
+                                nuevo_valor = input("Ingrese el nuevo nombre del producto: ")
+                            elif opcion==2:
+                                nuevo_valor = input("Ingrese la nueva descripción: ")
+                            elif opcion==3:
+                                nuevo_valor = int(input("Ingrese el nuevo valor de la cantidad en stock: "))
+                            elif opcion==4:
+                                nuevo_valor = float(input("Ingrese el nuevo precio del producto: "))
+                            elif opcion==5:
+                                nuevo_valor = input("Ingrese el nuevo nombre de la categoría del producto: ")
+                            
+                            cursor.execute(f"UPDATE inventario SET {campos[opcion]} = ? where Código = ?",(nuevo_valor,codigo))
+                            
+                            # Confirmar cambios.
+                            conexion.commit()
+
+                            # Producto modificado con éxito.
+                            print(f"\nProducto modificado con éxito (código {codigo}).\n")
+
+                            cont = (
+                                input("\n¿Desea modificar otro campo? Ingrese 's' o '[n]': ").lower() == "s"
+                            )
+                            print(" ")
+
+                    seguir = False
+        # Preguntar al usuario si el usuario quiere eliminar otro producto.
+        continuar = (
+            input("\n¿Desea modificar otro producto? Ingrese 's' o '[n]': ").lower() == "s"
+        )
+        print(" ")
+
+def eliminar_producto():
+
+    titulo_eliminar = "Eliminar productos."
+    titulo_menu_eliminar_nombre = "Eliminar producto por su nombre."
+    titulo_menu_eliminar_desc = "Eliminar producto por su descripción."
+    titulo_menu_eliminar_codigo = "Eliminar producto por su código."
+
+    continuar = True
+
+    opciones = {
+            1: "Seleccionar producto a eliminar por código",
+            2: "Seleccionar producto a eliminar por nombre",
+            3: "Seleccionar producto a eliminar por descripción",
+            4: "Volver al menú principal"
+        }
+    
+    opcion = 0
+
+    while continuar:
+
+        limpiar_pantalla()
+
+        print()
+        print("=" * len(titulo_eliminar))
+        print(titulo_eliminar)
+        print("=" * len(titulo_eliminar))
+        print()
+
+        for i in opciones.keys():
+            print(f"{i}. {opciones[i]}.")
+
+        try:
+            opcion = int(input(f"\nPor favor, seleccione una opción (1-4): "))
+        except:
+            print(f"\nDebe ingresar un número entero.")
+        else:
+            if (opcion == 4):
+                continuar = False
+            elif opcion in opciones.keys():
+                seguir = True
+                while seguir:
+                    print()
+                    if opcion == 1:
+                        print("=" * len(titulo_menu_eliminar_codigo))
+                        print(titulo_menu_eliminar_codigo)
+                        print("=" * len(titulo_menu_eliminar_codigo))
+                        try:
+                            codigo = int(input("\nIngrese el código del producto a eliminar: "))
+                        except:
+                            print(f"\nDebe ingresar un número.\n")
+                        else:
+                            producto_a_eliminar = buscar_por_codigo(codigo)
+                            imprimir_resultados(producto_a_eliminar)
+                    else:
+                        if opcion == 2:
+                            print("=" * len(titulo_menu_eliminar_codigo))
+                            print(titulo_menu_eliminar_codigo)
+                            print("=" * len(titulo_menu_eliminar_codigo))
+                        elif opcion == 3:
+                            print("=" * len(titulo_menu_eliminar_codigo))
+                            print(titulo_menu_eliminar_codigo)
+                            print("=" * len(titulo_menu_eliminar_codigo))
+                        
+                        resultado = buscar_producto(opcion)
+                        imprimir_resultados(resultado)
+                        n = len(resultado)
+                        if n>1:
+                            try:
+                                codigo = int(input("\nIngrese el código del producto a eliminar: "))
+                            except:
+                                print(f"\nDebe ingresar un número.\n")
+                            else:
+                                producto_a_eliminar = buscar_por_codigo(codigo)
+                                imprimir_resultados(producto_a_eliminar)
+                        else:
+                            codigo = resultado[0][0]
+                        
+                    confirmar = (
+                                input("\n¿Confirma eliminar este producto? Ingrese 's' o '[n]': ").lower() == "s"
+                            )
+                    if confirmar:
+                        cursor.execute("DELETE FROM inventario where Código = ?",(codigo,))
+                        # Confirmar cambios.
+                        conexion.commit()
+
+                        # Producto eliminado con éxito.
+                        print(f"\nProducto eliminado con éxito (código {codigo}).\n")
+                    seguir = False
+            else:
+                print("\nDebe ingresar un número entre 1 y 4, inclusive.")            
+
+        # Preguntar al usuario si el usuario quiere eliminar otro producto.
+        continuar = (
+            input("\n¿Desea eliminar otro producto? Ingrese 's' o '[n]': ").lower() == "s"
+        )
+        print(" ")
+
+def imprimir_menu_ppal():
+    # Menú de opciones
+
+    titulo_menu_ppal = "Sistema de gestión de productos."
 
     limpiar_pantalla()
     print()
@@ -1249,13 +564,19 @@ def menu_principal():
     print(titulo_menu_ppal)
     print("=" * len(titulo_menu_ppal))
     print()
-    for opt in claves:
-        print(f"{opt}. {opciones[opt]}.")
+    for opt in opciones_menu_ppal.keys():
+        print(f"{opt}. {opciones_menu_ppal[opt]}.")
+
+# Programa principal.
+
+def menu_principal():
     
     opcion = 0
 
-    opcion_salir = int(list(opciones.keys())[list(opciones.values()).index("Salir")])
+    opcion_salir = int(list(opciones_menu_ppal.keys())[list(opciones_menu_ppal.values()).index("Salir")])
     while opcion != opcion_salir:
+
+        imprimir_menu_ppal()
 
         # Solicitar al usuario que seleccione una opción
         try:
@@ -1266,12 +587,11 @@ def menu_principal():
             if opcion == 1:
                 agregar_producto()
             elif opcion == 2:
-                buscar_producto()
+                consultar_producto()
             elif opcion == 3:
                 modificar_producto()
             elif opcion == 4:
                 eliminar_producto()
-            elif opcion == 5:
-                consultar_inventario()
             elif opcion == opcion_salir:
                 print("\n\t¡Gracias por utlizar nuestro sistema!\n\n\t¡Hasta pronto!\n")
+                conexion.close()
